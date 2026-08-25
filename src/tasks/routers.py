@@ -13,7 +13,7 @@ tasks_router = APIRouter(prefix="/tasks", tags=["Tasks"])
 def show_tasks(
         task_service: Annotated[TaskService, Depends(get_task_service)],
         title: Annotated[str | None, Query(min_length=1, max_length=256, description="Filter tasks by title")] = None,
-        status: Annotated[TaskStatus | None, Query(description="Filter tasks by status")] = None) -> list[Task]:
+        status: Annotated[TaskStatus | None, Query(description="Filter tasks by status")] = None) -> dict[int, Task]:
     return task_service.get_tasks(title, status)
 
 @tasks_router.post("", status_code=statuscode.HTTP_201_CREATED)

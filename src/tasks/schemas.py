@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from src.tasks.constants import TaskStatus
 
 class Task(BaseModel):
-    id: int
     title: str
     description: str | None = None
     status: TaskStatus = TaskStatus.NOT_COMPLETE

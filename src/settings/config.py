@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 
-from src.settings.constants import Storage
+from src.settings.constants import StorageType
 
 class Settings(BaseSettings):
-    storage: Storage = Storage.IN_MEMORY
+    storage: StorageType = StorageType.JSON

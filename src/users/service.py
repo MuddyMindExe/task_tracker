@@ -6,6 +6,3 @@ class UserService:
 
     def show_user(self, user_id: int):
         return self.user_storage.get_user(user_id)
-
-
-user_service = UserService(UserStorage())
