@@ -3,6 +3,8 @@ from fastapi import status
 
 from typing import Annotated
 
+from starlette.status import HTTP_404_NOT_FOUND
+
 from src.users.dependecies import UserService, get_user_service
 from src.users.schemas import User, UserCreate, UserUpdate
 
@@ -28,3 +30,10 @@ def change_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
+
+@users_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, user_service: Annotated[UserService, Depends(get_user_service)]):
+
+    user = user_service.delete_user(user_id)
+    if not user:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
