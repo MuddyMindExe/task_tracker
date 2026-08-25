@@ -16,10 +16,6 @@ def show_tasks(
         status: Annotated[TaskStatus | None, Query(description="Filter tasks by status")] = None) -> dict[int, Task]:
     return task_service.get_tasks(title, status)
 
-@tasks_router.post("", status_code=statuscode.HTTP_201_CREATED)
-def add_task(task_data: TaskCreate, task_service: Annotated[TaskService, Depends(get_task_service)]) -> Task:
-    return task_service.add_task(task_data)
-
 @tasks_router.get("/{task_id}")
 def show_task(task_service: Annotated[TaskService, Depends(get_task_service)],
               task_id: Annotated[int, Path(ge=1, description="Task identifier")]) -> Task:
@@ -28,10 +24,14 @@ def show_task(task_service: Annotated[TaskService, Depends(get_task_service)],
         raise HTTPException(status_code=statuscode.HTTP_404_NOT_FOUND, detail="Task not found")
     return task
 
+@tasks_router.post("", status_code=statuscode.HTTP_201_CREATED)
+def add_task(task_data: TaskCreate, task_service: Annotated[TaskService, Depends(get_task_service)]) -> Task:
+    return task_service.add_task(task_data)
+
 @tasks_router.patch("/{task_id}")
 def change_task(
-        task_service: Annotated[TaskService, Depends(get_task_service)],
         task_id: Annotated[int, Path(ge=1, description="Task identifier")],
+        task_service: Annotated[TaskService, Depends(get_task_service)],
         task_data: TaskUpdate) -> Task:
     task = task_service.change_task(task_id, task_data)
     if not task:

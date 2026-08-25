@@ -21,8 +21,7 @@ class TaskService:
         return self.task_storage.get_task(task_id)
 
     def add_task(self, task_data: TaskCreate) -> Task | None:
-        task = self.task_storage.add_task(task_data)
-        return task
+        return self.task_storage.add_task(task_data)
 
     def delete_task(self, task_id: int) -> Task | None:
         return self.task_storage.delete_task(task_id)
