@@ -15,6 +15,12 @@ def clear_file():
     with open(test_json_file, "w", encoding="utf-8") as file:
         file.write("{}")
 
+@pytest.fixture(autouse=True)
+def rollback_json():
+    clear_file()
+    yield
+    clear_file()
+
 @pytest.fixture
 def tasks() -> tuple[TaskCreate, TaskCreate, TaskCreate]:
     return (
@@ -22,12 +28,6 @@ def tasks() -> tuple[TaskCreate, TaskCreate, TaskCreate]:
         TaskCreate(title="task2", description="desc2", status=TaskStatus.IN_PROGRESS, user_id=2),
         TaskCreate(title="task3", description="desc3", status=TaskStatus.IN_PROGRESS, user_id=3),
             )
-
-@pytest.fixture(autouse=True)
-def rollback_json():
-    clear_file()
-    yield
-    clear_file()
 
 @pytest.fixture(autouse=False)
 def rollback_memory():
@@ -72,17 +72,17 @@ class TestShowTasks:
 
         assert client.get("/tasks", params={'status': 0}).status_code == 422
 
-class TestAddTask:
-    def test_add_task(self, tasks):
-        response = client.post("/tasks", json=tasks[0].model_dump())
-        assert response.status_code == 201
-        assert response.json() == tasks[0].model_dump()
-
 class TestShowTask:
     def test_show_task(self, tasks):
         client.post("/tasks", json=tasks[0].model_dump())
         assert client.get("/tasks/1").json() == tasks[0].model_dump()
         assert client.get("tasks/0").status_code == 422
+
+class TestAddTask:
+    def test_add_task(self, tasks):
+        response = client.post("/tasks", json=tasks[0].model_dump())
+        assert response.status_code == 201
+        assert response.json() == tasks[0].model_dump()
 
 class TestChangeTask:
     def test_change_task(self, tasks):

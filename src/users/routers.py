@@ -5,7 +5,7 @@ from typing import Annotated
 
 from starlette.status import HTTP_404_NOT_FOUND
 
-from src.users.dependecies import UserService, get_user_service
+from src.users.dependencies import UserService, get_user_service
 from src.users.schemas import User, UserCreate, UserUpdate
 
 users_router = APIRouter(prefix="/users", tags=["Users"])
@@ -26,7 +26,7 @@ def change_user(
         user_id: int,
         user_service: Annotated[UserService, Depends(get_user_service)],
         user_data: UserUpdate) -> User:
-    user = user_service.change_user(user_id, **user_data.model_dump())
+    user = user_service.change_user(user_id, user_data)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
