@@ -3,6 +3,7 @@ from fastapi import Depends
 from typing import Annotated
 
 from src.settings.config import Settings, StorageType
+
 from src.users.service import UserService
 from src.users.storage import UserStorage, UserJsonStorage
 

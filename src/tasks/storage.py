@@ -1,11 +1,17 @@
 import json
 from abc import ABC, abstractmethod
 
+from sqlalchemy import select, delete, update
+from sqlalchemy.orm import Session
+
+from src.database import engine
+
 from src.tasks.schemas import Task, TaskCreate
+from src.tasks.models import Tasks
 
 class TaskStorage(ABC):
     @abstractmethod
-    def show_all(self):...
+    def show_all(self) -> dict[int, Task]:...
 
     @abstractmethod
     def get_task(self, task_id: int) -> Task | None:...
@@ -17,7 +23,7 @@ class TaskStorage(ABC):
     def delete_task(self, task_id: int) -> Task | None:...
 
     @abstractmethod
-    def change_task(self, task_id: int, **changes):...
+    def change_task(self, task_id: int, **changes) -> Task | None:...
 
 class TaskInMemoryStorage(TaskStorage):
     def __init__(self):
@@ -64,12 +70,11 @@ class TaskInMemoryStorage(TaskStorage):
 
         self.current_id = new_id
 
-
 class TaskJsonStorage(TaskStorage):
     def __init__(self, file="src/storage/tasks.json"):
         self.file = file
 
-    def show_all(self):
+    def show_all(self) -> dict[int, Task]:
         with open(self.file, "r", encoding="utf-8") as file:
             data = json.load(file)
         return {task_id: Task.model_validate(task) for task_id, task in data.items()}
@@ -130,5 +135,44 @@ class TaskJsonStorage(TaskStorage):
         with open(self.file, "r", encoding="utf-8") as file:
             data = json.load(file)
             return max(map(int, data.keys()), default=0) + 1
+
+class TaskSQLStorage(TaskStorage):
+    def show_all(self) -> dict[int, Task]:
+        query = select(Tasks)
+
+        with Session(engine) as session:
+            return session.scalar(query)
+
+    def get_task(self, task_id: int) -> Task | None:
+        query = select(Tasks).where(Tasks.id==task_id)
+
+        with Session(engine) as session:
+            return session.scalar(query)
+
+    def add_task(self, task_data: TaskCreate):
+        with Session(engine) as session:
+            task = Tasks(
+                title=task_data.title,
+                description=task_data.description,
+                status=task_data.status,
+                user_id=task_data.user_id
+            )
+
+            session.add(task)
+
+    def delete_task(self, task_id: int) -> Task | None:
+        query = delete(Tasks).where(Task.id==task_id)
+
+        with Session(engine) as session:
+            session.delete(query)
+
+    def change_task(self, task_id: int, **changes) -> Task | None:
+        query = update(Tasks).where(Tasks.id==task_id).values(**changes)
+
+        with Session(engine) as session:
+            session.execute(query)
+
+            getq = select(Tasks).where(Tasks.id==task_id)
+            return session.execute(getq).scalar()
 
 tasks = TaskInMemoryStorage()

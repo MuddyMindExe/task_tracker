@@ -2,7 +2,10 @@ from fastapi import Depends
 
 from typing import Annotated
 
+from src.database import engine
+
 from src.settings.config import Settings, StorageType
+
 from src.tasks.service import TaskService
 from src.tasks.storage import TaskStorage, TaskJsonStorage,  tasks
 
@@ -14,7 +17,8 @@ def get_settings() -> Settings:
 def get_task_storage(settings: Annotated[Settings, Depends(get_settings)]):
     dbs = {
         StorageType.IN_MEMORY: tasks,
-        StorageType.JSON: TaskJsonStorage()
+        StorageType.JSON: TaskJsonStorage(),
+        StorageType.MYSQL: engine
     }
     return dbs.get(settings.storage)
 

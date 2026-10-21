@@ -1,9 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.tasks.constants import TaskStatus
 
 class Task(BaseModel):
-    title: str
+    title: str = Field(max_length=256)
     description: str | None = None
     status: TaskStatus = TaskStatus.NOT_COMPLETE
     user_id: int
@@ -18,7 +18,7 @@ class Task(BaseModel):
         self.status = new_status
 
 class TaskCreate(BaseModel):
-    title: str
+    title: str = Field(max_length=256)
     description: str | None = None
     status: TaskStatus = TaskStatus.NOT_COMPLETE
     user_id: int

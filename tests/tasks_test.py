@@ -5,15 +5,29 @@ from src.main import app
 from src.tasks.schemas import TaskStatus, TaskCreate, TaskUpdate
 from src.tasks.dependencies import get_task_storage, TaskJsonStorage
 from src.tasks.dependencies import tasks as in_memory
+from src.database import engine
 
 client = TestClient(app)
 test_json_file = "tests/tasks.json"
 app.dependency_overrides[get_task_storage] = lambda: TaskJsonStorage(test_json_file)
-# app.dependency_overrides[get_task_storage] = lambda: in_memory
+app.dependency_overrides[get_task_storage] = lambda: in_memory
+app.dependency_overrides[get_task_storage] = lambda: engine
+
+def clear_memory():
+    in_memory.tasks = {}
+    in_memory.current_id = 1
 
 def clear_file():
     with open(test_json_file, "w", encoding="utf-8") as file:
         file.write("{}")
+
+def clear_sql():
+    pass
+
+def clear_all():
+    clear_memory()
+    clear_file()
+    clear_sql()
 
 @pytest.fixture(autouse=True)
 def rollback_json():
@@ -29,13 +43,11 @@ def tasks() -> tuple[TaskCreate, TaskCreate, TaskCreate]:
         TaskCreate(title="task3", description="desc3", status=TaskStatus.IN_PROGRESS, user_id=3),
             )
 
-@pytest.fixture(autouse=False)
+@pytest.fixture(autouse=True)
 def rollback_memory():
-    in_memory.tasks = {}
-    in_memory.current_id = 1
+    clear_all()
     yield
-    in_memory.tasks = {}
-    in_memory.current_id = 1
+    clear_all()
 
 @pytest.fixture
 def full_file(tasks):
