@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from src.database import engine
 
 from src.tasks.schemas import Task, TaskCreate
-from src.tasks.models import Tasks
+from src.tasks.models import tasks
 
 class TaskStorage(ABC):
     @abstractmethod
@@ -85,7 +85,7 @@ class TaskJsonStorage(TaskStorage):
         raw = data.get(str(task_id))
         return Task.model_validate(raw) if raw else None
 
-    def add_task(self, task_data) -> None:
+    def add_task(self, task_data) -> Task | None:
         with open(self.file, "r", encoding="utf-8") as file:
             data = json.load(file)
             task_id = str(self.get_id())
@@ -138,7 +138,7 @@ class TaskJsonStorage(TaskStorage):
 
 class TaskSQLStorage(TaskStorage):
     def show_all(self) -> dict[int, Task]:
-        query = select(Tasks)
+        query = select(tasks)
 
         with Session(engine) as session:
             return session.scalar(query)
