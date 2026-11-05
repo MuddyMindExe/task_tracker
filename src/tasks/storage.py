@@ -1,8 +1,8 @@
 import json
 from abc import ABC, abstractmethod
 
-from sqlalchemy import select, delete, update
-from sqlalchemy.orm import Session
+from sqlalchemy import select, insert, delete, update
+from sqlalchemy.exc import NoResultFound
 
 from src.database import engine
 
@@ -11,7 +11,7 @@ from src.tasks.models import tasks
 
 class TaskStorage(ABC):
     @abstractmethod
-    def show_all(self) -> dict[int, Task]:...
+    def show_all(self) -> dict[int, Task] | None:...
 
     @abstractmethod
     def get_task(self, task_id: int) -> Task | None:...
@@ -30,8 +30,8 @@ class TaskInMemoryStorage(TaskStorage):
         self.tasks: dict[int, Task] = {}
         self.current_id = 1
 
-    def show_all(self) -> dict[int, Task]:
-        return self.tasks
+    def show_all(self) -> dict[int, Task] | None:
+        return self.tasks if self.tasks else None
 
     def get_task(self, task_id: int) -> Task | None:
         return self.tasks.get(task_id)
@@ -74,10 +74,11 @@ class TaskJsonStorage(TaskStorage):
     def __init__(self, file="src/storage/tasks.json"):
         self.file = file
 
-    def show_all(self) -> dict[int, Task]:
+    def show_all(self) -> dict[int, Task] | None:
         with open(self.file, "r", encoding="utf-8") as file:
             data = json.load(file)
-        return {task_id: Task.model_validate(task) for task_id, task in data.items()}
+            res = {task_id: Task.model_validate(task) for task_id, task in data.items()}
+        return res if res else None
 
     def get_task(self, task_id: int) -> Task | None:
         with open(self.file, "r", encoding="utf-8") as file:
@@ -138,41 +139,54 @@ class TaskJsonStorage(TaskStorage):
 
 class TaskSQLStorage(TaskStorage):
     def show_all(self) -> dict[int, Task]:
-        query = select(tasks)
+        stmt = select(tasks)
 
-        with Session(engine) as session:
-            return session.scalar(query)
+        with engine.connect() as conn:
+            rows = conn.execute(stmt)
+
+            res = {
+                row.id: Task(
+                    title=row.title,
+                    description=row.description,
+                    status=row.status,
+                    user_id=row.user_id
+                )
+                for row in rows
+            }
+
+        return res
 
     def get_task(self, task_id: int) -> Task | None:
-        query = select(Tasks).where(Tasks.id==task_id)
+        stmt = select(tasks).where(tasks.id==task_id)
 
-        with Session(engine) as session:
-            return session.scalar(query)
+        with engine.connect() as conn:
+            row = conn.execute(stmt).one_or_none()
+
+        return Task.model_validate(row, from_attributes=True) if row else None
+
 
     def add_task(self, task_data: TaskCreate):
-        with Session(engine) as session:
-            task = Tasks(
-                title=task_data.title,
-                description=task_data.description,
-                status=task_data.status,
-                user_id=task_data.user_id
-            )
+        stmt = insert(tasks).values(
+            title=task_data.title,
+            description=task_data.description,
+            status=task_data.status,
+            user_id=task_data.user_id
+        )
 
-            session.add(task)
+        with engine.connect() as conn:
+            conn.execute(stmt)
+
 
     def delete_task(self, task_id: int) -> Task | None:
-        query = delete(Tasks).where(Task.id==task_id)
+        stmt = delete(tasks).where(tasks.c.id == task_id)
 
-        with Session(engine) as session:
-            session.delete(query)
+        with engine.connect() as conn:
+            conn.execute(stmt)
 
     def change_task(self, task_id: int, **changes) -> Task | None:
-        query = update(Tasks).where(Tasks.id==task_id).values(**changes)
+        stmt = update(tasks).where(tasks.c.id == task_id).values(**changes)
 
-        with Session(engine) as session:
-            session.execute(query)
+        with engine.connect() as conn:
+            conn.execute(stmt)
 
-            getq = select(Tasks).where(Tasks.id==task_id)
-            return session.execute(getq).scalar()
-
-tasks = TaskInMemoryStorage()
+in_memory_tasks = TaskInMemoryStorage()
